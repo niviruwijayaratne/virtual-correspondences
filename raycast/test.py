@@ -26,6 +26,7 @@ if __name__ == '__main__':
         direction=mesh_raycast.normalize((0.0, 0.0, -1.0)),
         mesh=triangles,
     )
+    res.sort(key=lambda x: x['distance'])
 
     pprint(res)
 
