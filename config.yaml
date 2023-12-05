@@ -1,0 +1,10 @@
+densepose_config: "./model_configs/densepose/densepose_rcnn_R_50_FPN_s1x.yaml"
+densepose_checkpoint: "./model_checkpoints/densepose/densepose_rcnn_R_50_FPN_s1x.pkl"
+smpl_model_config: "./model_configs/smpl/hrnet_w32_conv_pare_mix_cache.py"
+smpl_model_checkpoint: "./model_checkpoints/smpl/hrnet_w32_conv_pare_mosh.pth"
+detection_model_config: "./model_configs/smpl/faster_rcnn_r50_fpn_coco.py"
+detection_model_checkpoint: "./model_checkpoints/smpl/faster_rcnn_r50_fpn_1x_coco.pth"
+tracking_model_config: "./model_configs/smpl/deepsort_faster-rcnn_fpn_4e_mot17-private-half.py"
+tracking_model_checkpoint: "./"
+out_dir: "./data/"
+multi_person: True
