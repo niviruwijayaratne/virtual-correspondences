@@ -5,10 +5,10 @@ import numpy as np
 import fun_utils as utils
 from tqdm import tqdm
 
-NUM_ITERS = 1000
-ERROR_TOL = 6  # messi 7 (rad 10), kobe 20 (rad 20), gwh 6 (rad 20)
-IN_DIR = r'C:\Users\krish\Downloads\images'
-OUT_DIR = r'C:\Users\krish\Downloads\images\out'
+NUM_ITERS = 50000
+ERROR_TOL = 0.3  # messi 7 (rad 10), kobe 20 (rad 20), gwh 6 (rad 20)
+IN_DIR = r'D:\adev\virtual-correspondences\images'
+OUT_DIR = r'D:\adev\virtual-correspondences\images\out'
 
 
 def _line_point_distances(lines, pts):
@@ -77,9 +77,9 @@ def comput_F_ransac(file_name, roi, num_pts=8):
         raise ValueError(f'Invalid path for the input image pair')
     raw_correspondences = utils.read_data(raw_corresp_path)
 
-    if len(raw_correspondences) >  40000:
-        nn = np.random.choice(len(raw_correspondences), 40000)
-        raw_correspondences = raw_correspondences[nn]
+    # if len(raw_correspondences) >  40000:
+    #     nn = np.random.choice(len(raw_correspondences), 40000)
+    #     raw_correspondences = raw_correspondences[nn]
 
     raw_pts1, raw_pts2 = raw_correspondences[:, :2], raw_correspondences[:, 2:]
     raw_pts1 = raw_pts1[:, ::-1]
@@ -168,7 +168,7 @@ if __name__ =='__main__':
         ('kobe-dwade', [0, 0, 0, 0]),
         ('gwhunting', [0, 0, 0, 0]),
     ]
-    for file_name, roi in dir_rois[2:]:
+    for file_name, roi in dir_rois[:1]:
         print('\n\n', '*'*10, file_name, '*'*10)
 
         F_mat = comput_F_ransac(file_name, roi=None)

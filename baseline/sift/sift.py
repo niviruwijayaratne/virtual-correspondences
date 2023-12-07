@@ -3,8 +3,8 @@ import numpy as np
 from typing import Optional
 
 def sift_matcher(img1: np.ndarray, img2: np.ndarray, max_matches: Optional[int] = None, verbose: bool=False) -> np.ndarray:
-    img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
-    img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
+    # img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
+    # img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
 
     sift = cv2.SIFT_create()
 
@@ -42,8 +42,11 @@ def sift_matcher(img1: np.ndarray, img2: np.ndarray, max_matches: Optional[int] 
 
 
 if __name__ == '__main__':
-    img1 = cv2.imread('../images/yuna/Screen Shot 2023-12-02 at 3.48.02 PM.png')
-    img2 = cv2.imread('../images/yuna/Screen Shot 2023-12-02 at 3.48.20 PM.png')
+    # img1 = cv2.imread('../images/yuna/Screen Shot 2023-12-02 at 3.48.02 PM.png')
+    # img2 = cv2.imread('../images/yuna/Screen Shot 2023-12-02 at 3.48.20 PM.png')
+
+    img1 = cv2.imread(r'D:\adev\virtual-correspondences\images\kobe-dwade\front.jpg')
+    img2 = cv2.imread(r'D:\adev\virtual-correspondences\images\kobe-dwade\back.jpg')
 
     img1 = cv2.resize(img1, (600, 600), interpolation = cv2.INTER_LINEAR)
     img2 = cv2.resize(img2, (600, 600), interpolation = cv2.INTER_LINEAR)
