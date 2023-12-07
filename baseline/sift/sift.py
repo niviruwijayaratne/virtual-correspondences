@@ -1,7 +1,8 @@
 import cv2
 import numpy as np
+from typing import Optional
 
-def sift_matcher(img1: np.ndarray, img2: np.ndarray, max_matches: int = 10, verbose: bool=False) -> np.ndarray:
+def sift_matcher(img1: np.ndarray, img2: np.ndarray, max_matches: Optional[int] = None, verbose: bool=False) -> np.ndarray:
     img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
     img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
 
@@ -14,10 +15,13 @@ def sift_matcher(img1: np.ndarray, img2: np.ndarray, max_matches: int = 10, verb
     bf = cv2.BFMatcher(cv2.NORM_L1, crossCheck=True)
     matches = bf.match(des1, des2)
     matches = sorted(matches, key=lambda x: x.distance)
-    matches = matches[:max_matches]
+
+    if max_matches is not None:
+        matches = matches[:max_matches]
 
     if verbose:
         match_img = cv2.drawMatches(img1, kp1, img2, kp2, matches, img2, flags=2)
+        cv2.imwrite('res.jpg', match_img)
         cv2.imshow('Matches', match_img)
         cv2.waitKey()
 
@@ -41,5 +45,8 @@ if __name__ == '__main__':
     img1 = cv2.imread('../images/yuna/Screen Shot 2023-12-02 at 3.48.02 PM.png')
     img2 = cv2.imread('../images/yuna/Screen Shot 2023-12-02 at 3.48.20 PM.png')
 
-    arr_matches = sift_matcher(img1, img2, max_matches=10)
+    img1 = cv2.resize(img1, (600, 600), interpolation = cv2.INTER_LINEAR)
+    img2 = cv2.resize(img2, (600, 600), interpolation = cv2.INTER_LINEAR)
+
+    arr_matches = sift_matcher(img1, img2, max_matches=10, verbose=True)
     print(arr_matches)
