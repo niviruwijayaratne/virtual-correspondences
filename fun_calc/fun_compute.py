@@ -5,8 +5,8 @@ import numpy as np
 import fun_utils as utils
 from tqdm import tqdm
 
-NUM_ITERS = 100
-ERROR_TOL = 1.5
+NUM_ITERS = 1000
+ERROR_TOL = 6  # messi 7 (rad 10), kobe 20 (rad 20), gwh
 IN_DIR = r'C:\Users\krish\Downloads\images'
 OUT_DIR = r'C:\Users\krish\Downloads\images\out'
 
@@ -65,10 +65,10 @@ def comput_F_8_pt(pts1, pts2):
     return F_mat_denormed
 
 
-def comput_F_ransac(file_name, num_pts=8):
+def comput_F_ransac(file_name, roi, num_pts=8):
     # load required data
-    img1_path = f'{IN_DIR}/{file_name}/back.jpg'
-    img2_path = f'{IN_DIR}/{file_name}/front.jpg'
+    img1_path = f'{IN_DIR}/{file_name}/front.jpg'
+    img2_path = f'{IN_DIR}/{file_name}/back.jpg'
     raw_corresp_path = f'{IN_DIR}/{file_name}/correspondences.npy'
 
     img1 = cv2.imread(img1_path)
@@ -76,7 +76,12 @@ def comput_F_ransac(file_name, num_pts=8):
     if img1 is None or img2 is None:
         raise ValueError(f'Invalid path for the input image pair')
     raw_correspondences = utils.read_data(raw_corresp_path)
+    nn = np.random.choice(len(raw_correspondences), 40000)
+    raw_correspondences = raw_correspondences[nn]
+
     raw_pts1, raw_pts2 = raw_correspondences[:, :2], raw_correspondences[:, 2:]
+    raw_pts1 = raw_pts1[:, ::-1]
+    raw_pts2 = raw_pts2[:, ::-1]
 
     # perform RANSAC to find the best F matrix
     max_inliers = -1
@@ -106,12 +111,16 @@ def comput_F_ransac(file_name, num_pts=8):
 
     print(f'\nBest F matrix for {file_name} in {num_pts}-pt algorithm:')
     np.savetxt(sys.stdout, F_mat_best, '%0.8f')
-    print(utils.bmatrix(F_mat_best))
+    # print(utils.bmatrix(F_mat_best))
 
     # plot using the best F matrix
+    # """
     indices = np.random.choice(len(raw_pts1), num_pts)
     pts1 = raw_pts1[indices]
     pts2 = raw_pts2[indices]
+    # """
+
+    # pts1, pts2 = choose_roi_points(raw_pts1, raw_pts2, roi=roi, num_pts=num_pts)
     lines_prime = (F_mat_best @ utils.homogenize_points(pts1).T).T  # l_prime = F * x
 
     pts_colors = np.random.choice(256, size=(len(pts1), 3)).astype(int)
@@ -124,16 +133,42 @@ def comput_F_ransac(file_name, num_pts=8):
     titles = ['View #1 (chosen pts)', 'View #2 (epipolar lines)']
     utils.save_images(images, titles, save_path=out_path, size=(1, 2) if img1.shape[0] > img1.shape[1] else (2, 1), fig_w=10)
     utils.save_ransac_plot(inlier_logger, file_name, num_pts, save_path=f'{OUT_DIR}/{file_name}_plot.jpg')
+    np.save(f'{OUT_DIR}/{file_name}_f_mat.npy', F_mat_best)
 
-    return True
+    return F_mat_best
+
+
+def choose_roi_points(raw_pts1, raw_pts2, roi, num_pts=8):
+    # roi is [x1, y1, x2, y2]
+    # subset = np.array([x for x in img_pts if _of_interest(x, roi)], dtype=img_pts.dtype)
+
+    # subset = np.array([x for x in img_pts if _of_interest(x, roi)]]
+    is_valid = np.array([_of_interest(x, roi) for x in raw_pts1])
+    subset_indices = np.where(is_valid)[0]
+
+    indices = np.random.choice(len(subset_indices), num_pts)
+    pts1 = raw_pts1[indices]
+    pts2 = raw_pts2[indices]
+    return pts1, pts2
+
+
+def _of_interest(x, roi):
+    x_pt, y_pt = x
+    x1, y1, x2, y2 = roi
+    if x1 <= x_pt <= x2 and y1 <= y_pt <= y2:
+        return True
+    return False
 
 
 if __name__ =='__main__':
-    dirs = ['messi', 'kobe-dwade', 'gwhunting']
-
-    for file_name in dirs[:1]:
+    dir_rois = [
+        ('messi', [0, 0, 0, 0]),
+        ('kobe-dwade', [0, 0, 0, 0]),
+        ('gwhunting', [0, 0, 0, 0]),
+    ]
+    for file_name, roi in dir_rois[2:]:
         print('\n\n', '*'*10, file_name, '*'*10)
 
-        comput_F_ransac(file_name)
+        F_mat = comput_F_ransac(file_name, roi=None)
 
     print('\n\nexecution done')
