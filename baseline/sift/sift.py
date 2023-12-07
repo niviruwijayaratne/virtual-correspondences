@@ -36,6 +36,7 @@ def sift_matcher(img1: np.ndarray, img2: np.ndarray, max_matches: int = 10, verb
 
     return matches_arr
 
+
 if __name__ == '__main__':
     img1 = cv2.imread('../images/yuna/Screen Shot 2023-12-02 at 3.48.02 PM.png')
     img2 = cv2.imread('../images/yuna/Screen Shot 2023-12-02 at 3.48.20 PM.png')
