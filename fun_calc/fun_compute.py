@@ -6,7 +6,7 @@ import fun_utils as utils
 from tqdm import tqdm
 
 NUM_ITERS = 1000
-ERROR_TOL = 6  # messi 7 (rad 10), kobe 20 (rad 20), gwh
+ERROR_TOL = 6  # messi 7 (rad 10), kobe 20 (rad 20), gwh 6 (rad 20)
 IN_DIR = r'C:\Users\krish\Downloads\images'
 OUT_DIR = r'C:\Users\krish\Downloads\images\out'
 
@@ -76,8 +76,10 @@ def comput_F_ransac(file_name, roi, num_pts=8):
     if img1 is None or img2 is None:
         raise ValueError(f'Invalid path for the input image pair')
     raw_correspondences = utils.read_data(raw_corresp_path)
-    nn = np.random.choice(len(raw_correspondences), 40000)
-    raw_correspondences = raw_correspondences[nn]
+
+    if len(raw_correspondences) >  40000:
+        nn = np.random.choice(len(raw_correspondences), 40000)
+        raw_correspondences = raw_correspondences[nn]
 
     raw_pts1, raw_pts2 = raw_correspondences[:, :2], raw_correspondences[:, 2:]
     raw_pts1 = raw_pts1[:, ::-1]
