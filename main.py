@@ -4,6 +4,7 @@ from pathlib import Path
 
 import cv2
 import numpy as np
+import torch
 from tqdm import tqdm
 
 import utils.utils as utils
@@ -67,7 +68,6 @@ def predict_smpl(image_path: Path, config: dict):
             "--output",
             out_dir,
             "--multi_person_demo",
-            "--draw_bbox",
         ]
     else:
         cmd = [
@@ -86,7 +86,6 @@ def predict_smpl(image_path: Path, config: dict):
             "--output",
             out_dir,
             "--single_person_demo",
-            "--draw_bbox",
         ]
 
     subprocess.run(cmd)
@@ -107,6 +106,7 @@ def get_virtual_correspondences(
     part_idx: int = None,
     save_correspondences=True,
     visualize=True,
+    frame_idx=1,
 ):
     """Computes virtual correspondences between 2 images.
 
@@ -121,6 +121,15 @@ def get_virtual_correspondences(
     TODO (nwijayaratne): ReID net for multi-person tracking
     """
     cameras, vertices, faces = predict_smpl(image1_path, config)
+    cameras2, vertices2, faces2 = predict_smpl(image2_path, config)
+    # vertices2[0] -= cameras.T.to(vertices2[0].device) - cameras2.T.to(vertices2[0].device)
+    # vertices2[0] = (torch.tensor([[0, 0, 1], [0, 1, 0], [-1, 0, 0]], dtype=cameras.R.dtype, device=vertices2[0].device) @ vertices2[0].T).T
+    # vertices2[0] = cameras.R.T.to(vertices2[0].device) @ vertices2[0]
+    # vertices2[0] = (torch.tensor([[ 0.51128958, -0.01874729, -0.859204] , [-0.8593316, 0.00221703, -0.51141392], [0.01149251,  0.9998218,  -0.01497659]], dtype=cameras.R.dtype, device=vertices2[0].device) @ vertices2[0].T).T
+    # print(torch.tensor([[0, 0, 1], [0, 1, 0], [-1, 0, 0]], dtype=cameras.R.dtype, device=vertices2[0].device))
+    # print(torch.squeeze(cameras2.R).T @ torch.squeeze(cameras.R))
+    # vertices2[0][:, 0] = vertices[0][:, 0] - (cameras.T[0][-1] - cameras2.T[0][-1]).to(vertices[0].device)
+
     densepose_path = predict_densepose(image2_path, config)
 
     img1 = cv2.imread(str(image1_path))
@@ -140,7 +149,7 @@ def get_virtual_correspondences(
             else:
                 img2 = np.pad(img2, ((padding, padding), (0, 0), (0, 0)))
         img2_padding += padding
-    else:
+    elif img2.shape[0] > img1.shape[0]:
         padding = (img2.shape[0] - img1.shape[0]) // 2
         if padding < 1:
             padding = 1
@@ -153,13 +162,15 @@ def get_virtual_correspondences(
         img1_padding += padding
 
     img_stack = np.hstack([img1, img2])
+    img_stack2 = np.hstack([img1, img2])
     colors = [
         (255, 0, 0),
         (0, 0, 255),
     ]  # TODO (niviruwijayaratne): Maybe don't hardcode this
 
     correspondences = None
-    for person_id in tqdm(range(len(vertices))):
+    vertices2 = vertices
+    for person_id in tqdm(range(min(len(vertices), len(vertices2)))):
         # For specific person, get DensePose_vertices in world space and corresponding pixel coordinates in the second image.
         densepose_vertices, pixel_locations = utils.parse_densepose_data(
             densepose_path,
@@ -172,6 +183,20 @@ def get_virtual_correspondences(
         # Project and filter SMPL vertices to image 1.
         smpl_vertices, smpl_projections = utils.project_points(
             cameras[person_id], vertices[person_id], dims=(img1.shape[0], img1.shape[1])
+        )
+        densepose_vertices2, densepose_projectiosn2 = utils.project_points(
+            cameras[person_id], densepose_vertices, dims=(img1.shape[0], img1.shape[1])
+        )
+        canvas = np.zeros_like(img1)
+        canvas[smpl_projections[:, 0], smpl_projections[:, 1]] = [255, 0, 0]
+        canvas[densepose_projectiosn2[:, 0], densepose_projectiosn2[:, 1]] = [0, 0, 255]
+        cv2.imwrite("./data/outputs/messi/densepose_mapping.png", canvas)
+
+        # Project mesh from image 2 onto image 1
+        smpl_vertices2, smpl_projections2 = utils.project_points(
+            cameras[person_id],
+            vertices2[person_id],
+            dims=(img1.shape[0], img1.shape[1]),
         )
 
         (
@@ -200,13 +225,18 @@ def get_virtual_correspondences(
             if len(img1_coords) // 100 == 0:
                 skip = 1
             else:
-                skip = len(img1_coords) // 100
+                skip = len(img1_coords) // 50
 
             img1_coords = img1_coords[::skip]
             img2_coords = img2_coords[::skip]
+            for img1_coord, img2_coord in zip(smpl_projections, smpl_projections2):
+                cv2.circle(img_stack2, img1_coord[::-1], 3, colors[person_id], -1)
+                cv2.circle(img_stack2, img2_coord[::-1], 3, colors[person_id], -1)
+                cv2.line(img_stack2, img1_coord[::-1], img2_coord[::-1], (0, 255, 0), 1)
+
             for img1_coord, img2_coord in zip(img1_coords, img2_coords):
                 img2_coord[1] += img1.shape[1]
-                cv2.circle(img_stack, img1_coord[::-1], 6, colors[person_id], -1)
+                cv2.circle(img_stack, img1_coord[::-1], 3, colors[person_id], -1)
                 cv2.circle(img_stack, img2_coord[::-1], 3, colors[person_id], -1)
                 cv2.line(img_stack, img1_coord[::-1], img2_coord[::-1], (0, 255, 0), 1)
 
@@ -225,20 +255,44 @@ def get_virtual_correspondences(
             Path(config["out_dir"])
             / "outputs"
             / f"{image1_path.parent.stem}"
-            / f"densepose_pixel_correspondence_{part_idx}.png"
+            / f"densepose_pixel_correspondence_{part_idx}_{frame_idx}.png"
         )
+
+        out_path2 = (
+            Path(config["out_dir"])
+            / "outputs"
+            / f"{image1_path.parent.stem}"
+            / f"mesh_projections.png"
+        )
+
+        print(out_path)
         cv2.imwrite(str(out_path), img_stack)
+        cv2.imwrite(str(out_path2), img_stack2)
 
     return correspondences
 
 
 def main(args):
     config = utils.parse_config(args.config)
-    image1_path = Path(args.image1_path)
-    image2_path = Path(args.image2_path)
-    correspondences = get_virtual_correspondences(
-        image1_path, image2_path, config, part_idx=args.part_idx
-    )
+    if args.image1_path is not None and args.image2_path is not None:
+        image1_path = Path(args.image1_path)
+        image2_path = Path(args.image2_path)
+        correspondences = get_virtual_correspondences(
+            image1_path, image2_path, config, part_idx=args.part_idx
+        )
+    if args.image_dir is not None:
+        ims = Path(args.image_dir).glob("*.jpg")
+        ims = sorted(
+            list(ims), key=lambda x: f"{int(str(Path(x.stem))):06d}", reverse=True
+        )
+        base_im = ims[-1]
+        for i, im in enumerate(ims):
+            if len(ims) - 1 - i > 100:
+                continue
+            else:
+                correspondences = get_virtual_correspondences(
+                    base_im, im, config, part_idx=args.part_idx, frame_idx=len(ims) - i
+                )
 
 
 if __name__ == "__main__":
@@ -246,6 +300,9 @@ if __name__ == "__main__":
     parser.add_argument("--config", type=str, help="Path to config.yaml file")
     parser.add_argument("--image1_path", type=str, help="Path to first input image.")
     parser.add_argument("--image2_path", type=str, help="Path to second input image.")
+    parser.add_argument(
+        "--image_dir", type=str, help="Path to directory of videp frames."
+    )
     parser.add_argument("--part_idx", type=int, help="Part index", default=None)
     args = parser.parse_args()
     main(args)
