@@ -1,14 +1,15 @@
-import cv2
 import os
 import sys
-import numpy as np
+
+import cv2
 import fun_utils as utils
+import numpy as np
 from tqdm import tqdm
 
 NUM_ITERS = 50000
 ERROR_TOL = 0.3  # messi 7 (rad 10), kobe 20 (rad 20), gwh 6 (rad 20)
-IN_DIR = r'D:\adev\virtual-correspondences\images'
-OUT_DIR = r'D:\adev\virtual-correspondences\images\out'
+IN_DIR = r"D:\adev\virtual-correspondences\images"
+OUT_DIR = r"D:\adev\virtual-correspondences\images\out"
 
 
 def _line_point_distances(lines, pts):
@@ -67,14 +68,14 @@ def comput_F_8_pt(pts1, pts2):
 
 def comput_F_ransac(file_name, roi, num_pts=8):
     # load required data
-    img1_path = f'{IN_DIR}/{file_name}/front.jpg'
-    img2_path = f'{IN_DIR}/{file_name}/back.jpg'
-    raw_corresp_path = f'{IN_DIR}/{file_name}/correspondences.npy'
+    img1_path = f"{IN_DIR}/{file_name}/front.jpg"
+    img2_path = f"{IN_DIR}/{file_name}/back.jpg"
+    raw_corresp_path = f"{IN_DIR}/{file_name}/correspondences.npy"
 
     img1 = cv2.imread(img1_path)
     img2 = cv2.imread(img2_path)
     if img1 is None or img2 is None:
-        raise ValueError(f'Invalid path for the input image pair')
+        raise ValueError(f"Invalid path for the input image pair")
     raw_correspondences = utils.read_data(raw_corresp_path)
 
     # if len(raw_correspondences) >  40000:
@@ -106,13 +107,15 @@ def comput_F_ransac(file_name, roi, num_pts=8):
         inlier_logger[i] = max_inliers / len(raw_pts1)
 
     # Step 4: Recompute F matrix based on all inliers
-    print(f'Total inliers for img "{file_name}" is {round(100 * sum(max_inliers_indices)/ len(raw_pts1))}%')
+    print(
+        f'Total inliers for img "{file_name}" is {round(100 * sum(max_inliers_indices)/ len(raw_pts1))}%'
+    )
     pts_inliers1 = raw_pts1[max_inliers_indices]
     pts_inliers2 = raw_pts2[max_inliers_indices]
     F_mat_best = comput_F_8_pt(pts_inliers1, pts_inliers2)
 
-    print(f'\nBest F matrix for {file_name} in {num_pts}-pt algorithm:')
-    np.savetxt(sys.stdout, F_mat_best, '%0.8f')
+    print(f"\nBest F matrix for {file_name} in {num_pts}-pt algorithm:")
+    np.savetxt(sys.stdout, F_mat_best, "%0.8f")
     # print(utils.bmatrix(F_mat_best))
 
     # plot using the best F matrix
@@ -130,12 +133,20 @@ def comput_F_ransac(file_name, roi, num_pts=8):
     view_2_pts = utils.annotate_img_pts(np.copy(img2), pts2, pts_colors, radius=20)
     view_2_lines = utils.annotate_img_lines(view_2_pts, lines_prime, pts_colors)
 
-    out_path = f'{OUT_DIR}/{file_name}.jpg'
+    out_path = f"{OUT_DIR}/{file_name}.jpg"
     images = [view_1_pts, view_2_lines]
-    titles = ['View #1 (chosen pts)', 'View #2 (epipolar lines)']
-    utils.save_images(images, titles, save_path=out_path, size=(1, 2) if img1.shape[0] > img1.shape[1] else (2, 1), fig_w=10)
-    utils.save_ransac_plot(inlier_logger, file_name, num_pts, save_path=f'{OUT_DIR}/{file_name}_plot.jpg')
-    np.save(f'{OUT_DIR}/{file_name}_f_mat.npy', F_mat_best)
+    titles = ["View #1 (chosen pts)", "View #2 (epipolar lines)"]
+    utils.save_images(
+        images,
+        titles,
+        save_path=out_path,
+        size=(1, 2) if img1.shape[0] > img1.shape[1] else (2, 1),
+        fig_w=10,
+    )
+    utils.save_ransac_plot(
+        inlier_logger, file_name, num_pts, save_path=f"{OUT_DIR}/{file_name}_plot.jpg"
+    )
+    np.save(f"{OUT_DIR}/{file_name}_f_mat.npy", F_mat_best)
 
     return F_mat_best
 
@@ -162,15 +173,15 @@ def _of_interest(x, roi):
     return False
 
 
-if __name__ =='__main__':
+if __name__ == "__main__":
     dir_rois = [
-        ('messi', [0, 0, 0, 0]),
-        ('kobe-dwade', [0, 0, 0, 0]),
-        ('gwhunting', [0, 0, 0, 0]),
+        ("messi", [0, 0, 0, 0]),
+        ("kobe-dwade", [0, 0, 0, 0]),
+        ("gwhunting", [0, 0, 0, 0]),
     ]
     for file_name, roi in dir_rois[:1]:
-        print('\n\n', '*'*10, file_name, '*'*10)
+        print("\n\n", "*" * 10, file_name, "*" * 10)
 
         F_mat = comput_F_ransac(file_name, roi=None)
 
-    print('\n\nexecution done')
+    print("\n\nexecution done")

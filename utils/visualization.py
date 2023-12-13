@@ -1,4 +1,5 @@
 # yapf: disable
+import argparse as ap
 import copy
 import glob
 import os
@@ -9,10 +10,9 @@ from functools import partial
 from pathlib import Path
 from typing import List, Optional, Tuple, Union
 
+import cv2
 import mmcv
-
-#from mmhuman3d.core.renderer.torch3d_renderer import render_runner
-import mmhumand3d.core.renderer.torch3d_renderer.render_runner as render_runner
+import mmhuman3d.core.renderer.torch3d_renderer.render_runner as render_runner
 import numpy as np
 import torch
 import torch.nn as nn
@@ -978,7 +978,7 @@ def render_smpl(
         vertices = vertices.reshape(num_frames, -1, 3)
     else:
         vertices = vertices.view(num_frames, -1, 3)
-    print(vertices)
+
     meshes = meshes.update_padded(new_verts_padded=vertices)
 
     # orig_cam and K are None, use look_at_view
@@ -1090,40 +1090,6 @@ def render_smpl(
         )
     )
     return cameras, vertices
-
-    if image_array is not None:
-        image_array = torch.Tensor(image_array)
-        image_array = align_input_to_padded(
-            image_array, ndim=4, batch_size=num_frames, padding_mode="ones"
-        )
-    # prepare the render data.
-    render_data = dict(
-        images=image_array,
-        meshes=meshes,
-        cameras=cameras,
-        joints=joints,
-        joints_gt=kp3d,
-    )
-
-    results = render_runner.render(
-        renderer=renderer,
-        device=device,
-        batch_size=batch_size,
-        output_path=output_path,
-        return_tensor=return_tensor,
-        no_grad=no_grad,
-        verbose=verbose,
-        **render_data,
-    )
-
-    if remove_folder:
-        if Path(frames_folder).is_dir():
-            shutil.rmtree(frames_folder)
-
-    if return_tensor:
-        return results
-    else:
-        return None
 
 
 def visualize_smpl_calibration(
@@ -1237,66 +1203,59 @@ def visualize_smpl_vibe(
     )
 
 
-def visualize_T_pose(
-    num_frames, body_model_config=None, body_model=None, orbit_speed=1.0, **kwargs
-) -> None:
-    """Simplest way to visualize a sequence of T pose."""
-    assert num_frames > 0, "`num_frames` is required."
-    assert body_model_config is not None or body_model is not None
-    model_type = (
-        body_model_config["type"]
-        if body_model_config is not None
-        else body_model.name().replace("-", "").lower()
-    )
-    if model_type == "smpl":
-        poses = torch.zeros(num_frames, 72)
-    else:
-        poses = torch.zeros(num_frames, 165)
+def make_video(image_dir, out):
+    images = [img for img in os.listdir(image_dir)]
+    frame = cv2.imread(os.path.join(image_dir, images[0]))
+    height, width, _ = frame.shape
 
-    func = partial(
-        render_smpl,
-        betas=None,
-        transl=None,
-        verts=None,
-        convention="pytorch3d",
-        projection="fovperspective",
-        K=None,
-        R=None,
-        T=None,
-        origin_frames=None,
-    )
-    for k in func.keywords.keys():
-        if k in kwargs:
-            kwargs.pop(k)
-    return func(
-        poses=poses,
-        body_model_config=body_model_config,
-        body_model=body_model,
-        orbit_speed=orbit_speed,
-        **kwargs,
-    )
+    video = cv2.VideoWriter(out, cv2.VideoWriter_fourcc(*"mp4v"), 1, (width, height))
+    for image in images:
+        video.write(cv2.imread(os.path.join(image_dir, image)))
+
+    cv2.destroyAllWindows()
+    video.release()
 
 
-def visualize_smpl_pose(poses=None, verts=None, **kwargs) -> None:
-    """Simplest way to visualize a sequence of smpl pose.
+def parse_video(video_path, out_dir):
+    cap = cv2.VideoCapture(video_path)
+    count = 0
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if ret == True:
+            cv2.imwrite(os.path.join(out_dir, f"{count:06d}.jpg"), frame)
+            count += 1
+        else:
+            break
 
-    Cameras will focus on the center of smpl mesh. `orbit speed` is
-    recommended.
-    """
-    assert (poses is not None) or (verts is not None), "Pass either `poses` or `verts`."
-    func = partial(
-        render_smpl,
-        convention="opencv",
-        projection="fovperspective",
-        K=None,
-        R=None,
-        T=None,
-        in_ndc=True,
-        origin_frames=None,
-        frame_list=None,
-        image_array=None,
+    cap.release()
+
+
+def main(args):
+    if args.get_frames:
+        assert Path(args.input).is_file()
+        assert Path(args.output).is_dir()
+        parse_video(args.input, args.output)
+    elif args.make_video:
+        assert Path(args.input).is_dir()
+        assert Path(args.output).is_file()
+        make_video(args.input, args.output)
+
+
+if __name__ == "__main__":
+    parser = ap.ArgumentParser()
+    parser.add_argument("--get_frames", action=ap.BooleanOptionalAction)
+    parser.add_argument("--make_video", action=ap.BooleanOptionalAction)
+    parser.add_argument(
+        "--input",
+        help="Path to input video or input directory depending on application.",
+        type=str,
+        required=True,
     )
-    for k in func.keywords.keys():
-        if k in kwargs:
-            kwargs.pop(k)
-    return func(poses=poses, verts=verts, **kwargs)
+    parser.add_argument(
+        "--output",
+        help="Path to output directory/file to write results depending on application.",
+        type=str,
+        required=True,
+    )
+    args = parser.parse_args()
+    main(args)

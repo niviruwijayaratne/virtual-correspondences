@@ -1,11 +1,11 @@
-import numpy as np
-import cv2
 import pathlib
+
+import cv2
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 def find_best_F_matrix(F_candidates, raw_pts1, raw_pts2):
-
     indices = np.random.choice(len(raw_pts1), 7)
     extra_pts_in_img1 = homogenize_points(raw_pts1[indices])
     extra_pts_in_img2 = homogenize_points(raw_pts2[indices])
@@ -23,7 +23,9 @@ def find_best_F_matrix(F_candidates, raw_pts1, raw_pts2):
             pts_of_intersections.append(pt_of_intersection)
 
         pts_of_intersections = np.array(pts_of_intersections)
-        raw_epipole_error = np.mean(np.std(pts_of_intersections, axis=0))  # mean std deviation across all coeffs
+        raw_epipole_error = np.mean(
+            np.std(pts_of_intersections, axis=0)
+        )  # mean std deviation across all coeffs
         epipole_errors.append(raw_epipole_error)
 
     # raw_epipole_error should be zero for the ideal candidate
@@ -70,7 +72,9 @@ def annotate_img_pts(img, points, colors, radius=10):
         colors = colors.tolist()
 
     for pt, color in zip(points, colors):
-        cv2.circle(img, pt.astype(int), radius=radius, color=color, thickness=cv2.FILLED)
+        cv2.circle(
+            img, pt.astype(int), radius=radius, color=color, thickness=cv2.FILLED
+        )
     return img
 
 
@@ -83,17 +87,17 @@ def annotate_img_lines(img, lines_prime, colors, thickness=None):
 
     for (l_1, l_2, l_3), color in zip(lines_prime, colors):
         pt1 = (0, int(-l_3 / l_2))
-        pt2 = (img_w, int(- (l_3 + l_1 * img_w) / l_2))
+        pt2 = (img_w, int(-(l_3 + l_1 * img_w) / l_2))
         cv2.line(img, pt1, pt2, color, thickness=thickness)
     return img
 
 
 def save_ransac_plot(inlier_logger, img_name, num_pts, save_path):
-    plt.plot(inlier_logger * 100, '-', color='g')
-    plt.title(f'{num_pts}-pt algorithm on {img_name}', fontweight="bold")
-    plt.xlabel('Iterations')
+    plt.plot(inlier_logger * 100, "-", color="g")
+    plt.title(f"{num_pts}-pt algorithm on {img_name}", fontweight="bold")
+    plt.xlabel("Iterations")
     plt.ylabel("Max Inlier ratio")
-    plt.savefig(save_path, bbox_inches='tight')
+    plt.savefig(save_path, bbox_inches="tight")
     plt.close()
 
 
@@ -119,12 +123,12 @@ def save_images(images, titles, save_path, size=(2, 2), fig_w=10, fig_h=10):
 def read_data(path):
     file_extension = pathlib.Path(path).suffix
 
-    if file_extension == '.txt':
+    if file_extension == ".txt":
         data = np.loadtxt(path)
-    elif file_extension == '.npy' or file_extension == '.npz':
+    elif file_extension == ".npy" or file_extension == ".npz":
         data = np.load(path)
     else:
-        raise ValueError(f'unsupported file type for{path}')
+        raise ValueError(f"unsupported file type for{path}")
     return data
 
 
@@ -134,7 +138,9 @@ def homogenize_points(pts):
     elif pts.shape[1] == 3:
         return pts
     else:
-        raise ValueError(f'Invalid input points shape while homogenizing: array of shape {pts.shape}')
+        raise ValueError(
+            f"Invalid input points shape while homogenizing: array of shape {pts.shape}"
+        )
 
 
 def sim_normalized_points(pts):
@@ -146,11 +152,7 @@ def sim_normalized_points(pts):
     d_avg = np.mean(np.linalg.norm(pts - np.array([x_centroid, y_centroid]), axis=1))
     s = np.sqrt(2) / d_avg
 
-    T_mat = np.array([
-        [s, 0, - s * x_centroid],
-        [0, s, - s * y_centroid],
-        [0, 0, 1]
-    ])
+    T_mat = np.array([[s, 0, -s * x_centroid], [0, s, -s * y_centroid], [0, 0, 1]])
 
     normalized_pts = (T_mat @ pts_homo.T).T
     return T_mat, normalized_pts
@@ -163,9 +165,9 @@ def bmatrix(a):
     :returns: LaTeX bmatrix as a string
     """
     if len(a.shape) > 2:
-        raise ValueError('bmatrix can at most display two dimensions')
-    lines = str(a).replace('[', '').replace(']', '').splitlines()
-    rv = [r'\begin{bmatrix}']
-    rv += ['  ' + ' & '.join(l.split()) + r'\\' for l in lines]
-    rv +=  [r'\end{bmatrix}']
-    return '\n'.join(rv)
+        raise ValueError("bmatrix can at most display two dimensions")
+    lines = str(a).replace("[", "").replace("]", "").splitlines()
+    rv = [r"\begin{bmatrix}"]
+    rv += ["  " + " & ".join(l.split()) + r"\\" for l in lines]
+    rv += [r"\end{bmatrix}"]
+    return "\n".join(rv)

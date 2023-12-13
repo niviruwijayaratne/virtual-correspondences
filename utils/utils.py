@@ -25,6 +25,7 @@ def get_smpl_mesh(smpl_path: str, dims: Tuple[int, int] = None):
     """
 
     output = np.load(smpl_path, allow_pickle=True)
+    smpl_params = output["smpl"]
     vertices = output["verts"]
     faces = np.load("./data/body_models/smpl_faces.npy")
     cams = output["pred_cams"]
@@ -107,25 +108,6 @@ def project_points(
     vertices = filter_bounds(filtered_coords, vertices)
     if img2_coords is not None:
         img2_coords = filter_bounds(filtered_coords, img2_coords)
-    # img1_coords = img1_coords[np.where(img1_coords[:, 1] > 0)]
-    # vertices = vertices[np.where(img1_coords[:, 1] > 0)]
-    # if img2_coords is not None:
-    #     img2_coords = img2_coords[np.where(img1_coords[:, 1] > 0)]
-
-    # img1_coords = img1_coords[np.where(img1_coords[:, 1] < H)]
-    # vertices = vertices[np.where(img1_coords[:, 1] < H)]
-    # if img2_coords is not None:
-    #     img2_coords = img2_coords[np.where(img1_coords[:, 1] < H)]
-
-    # img1_coords = img1_coords[np.where(img1_coords[:, 0] > 0)]
-    # vertices = vertices[np.where(img1_coords[:, 0] > 0)]
-    # if img2_coords is not None:
-    #     img2_coords = img2_coords[np.where(img1_coords[:, 0] > 0)]
-
-    # img1_coords = img1_coords[np.where(img1_coords[:, 0] < W)]
-    # vertices = vertices[np.where(img1_coords[:, 0] < W)]
-    # if img2_coords is not None:
-    #     img2_coords = img2_coords[np.where(img1_coords[:, 0] < W)]
 
     if img2_coords is not None:
         return vertices, img1_coords[:, ::-1], img2_coords

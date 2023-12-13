@@ -8,7 +8,6 @@ from pathlib import Path
 import mmcv
 import numpy as np
 import torch
-
 from mmhuman3d.apis import (
     feature_extract,
     inference_image_based_model,
@@ -238,7 +237,6 @@ def single_person_with_mmdet(args, frames_iter):
         pred_cams = smooth_process(
             pred_cams[:, np.newaxis], smooth_type=args.smooth_type
         ).reshape(frame_num, 3)
-
 
     if smpl_poses.shape[1:] == (24, 3, 3):
         smpl_poses = rotmat_to_aa(smpl_poses)
