@@ -52,7 +52,8 @@ def comput_F_8_pt(pts1, pts2):
     A[:, 7] = pts2_norm[:, 2] * pts1_norm[:, 1]
     A[:, 8] = pts2_norm[:, 2] * pts1_norm[:, 2]
 
-    u, s, v_t = np.linalg.svd(A)
+    # full_matrices=False: only v_t is used, and a full U is N x N (88 GB for ~100k inliers)
+    u, s, v_t = np.linalg.svd(A, full_matrices=False)
     F_mat = v_t[-1].reshape(3, 3)
 
     # step 3: Project F to rank 2 matrix

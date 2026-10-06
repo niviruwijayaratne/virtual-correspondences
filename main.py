@@ -190,7 +190,10 @@ def get_virtual_correspondences(
         canvas = np.zeros_like(img1)
         canvas[smpl_projections[:, 0], smpl_projections[:, 1]] = [255, 0, 0]
         canvas[densepose_projectiosn2[:, 0], densepose_projectiosn2[:, 1]] = [0, 0, 255]
-        cv2.imwrite("./data/outputs/messi/densepose_mapping.png", canvas)
+        cv2.imwrite(
+            str(Path(config["out_dir"]) / "outputs" / image2_path.parent.stem / "densepose_mapping.png"),
+            canvas,
+        )
 
         # Project mesh from image 2 onto image 1
         smpl_vertices2, smpl_projections2 = utils.project_points(

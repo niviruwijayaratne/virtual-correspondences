@@ -621,7 +621,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--device",
         choices=["cpu", "cuda"],
-        default="cuda",
+        default="cuda" if torch.cuda.is_available() else "cpu",
         help="device used for testing",
     )
     args = parser.parse_args()

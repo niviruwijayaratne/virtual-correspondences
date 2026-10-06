@@ -498,7 +498,7 @@ def render_smpl(
     alpha: float = 1.0,
     no_grad: bool = True,
     batch_size: int = 10,
-    device: Union[torch.device, str] = "cuda",
+    device: Union[torch.device, str] = "cuda" if torch.cuda.is_available() else "cpu",
     # file io parameters
     return_tensor: bool = False,
     output_path: str = None,
